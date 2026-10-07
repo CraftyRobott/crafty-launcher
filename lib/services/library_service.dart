@@ -40,7 +40,8 @@ class LibraryService {
   static Future<void> addFavorite(String romPath) async {
     final prefs = await SharedPreferences.getInstance();
 
-    final favorites = prefs.getStringList(_favoritesKey) ?? [];
+    final favorites =
+        prefs.getStringList(_favoritesKey) ?? [];
 
     if (!favorites.contains(romPath)) {
       favorites.add(romPath);
@@ -55,7 +56,8 @@ class LibraryService {
   static Future<void> removeFavorite(String romPath) async {
     final prefs = await SharedPreferences.getInstance();
 
-    final favorites = prefs.getStringList(_favoritesKey) ?? [];
+    final favorites =
+        prefs.getStringList(_favoritesKey) ?? [];
 
     favorites.remove(romPath);
 

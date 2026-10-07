@@ -9,10 +9,12 @@ class GamesScreen extends StatefulWidget {
   const GamesScreen({super.key});
 
   @override
-  State<GamesScreen> createState() => _GamesScreenState();
+  State<GamesScreen> createState() =>
+      _GamesScreenState();
 }
 
-class _GamesScreenState extends State<GamesScreen> {
+class _GamesScreenState
+    extends State<GamesScreen> {
   List<RomSystem> systems = [];
   bool loading = true;
 
@@ -28,9 +30,19 @@ class _GamesScreenState extends State<GamesScreen> {
       loading = true;
     });
 
-    final folder = await LibraryService.getRomFolder();
+    final folder =
+        await LibraryService.getRomFolder();
+
+    debugPrint('======================================');
+    debugPrint('CRAFTY LAUNCHER - ROM SCAN');
+    debugPrint('ROM FOLDER: $folder');
+    debugPrint('======================================');
 
     if (folder == null) {
+      debugPrint(
+        'NO ROM FOLDER HAS BEEN SELECTED',
+      );
+
       if (!mounted) return;
 
       setState(() {
@@ -41,7 +53,27 @@ class _GamesScreenState extends State<GamesScreen> {
       return;
     }
 
-    final scannedSystems = await RomScanner.scan(folder);
+    final scannedSystems =
+        await RomScanner.scan(folder);
+
+    debugPrint(
+      'SYSTEMS FOUND: ${scannedSystems.length}',
+    );
+
+    for (final system in scannedSystems) {
+      debugPrint(
+        'SYSTEM: ${system.name} | '
+        'ROMS: ${system.roms.length}',
+      );
+
+      for (final rom in system.roms) {
+        debugPrint(
+          '  ROM: ${rom.name} | ${rom.path}',
+        );
+      }
+    }
+
+    debugPrint('======================================');
 
     if (!mounted) return;
 
@@ -78,11 +110,14 @@ class _GamesScreenState extends State<GamesScreen> {
       );
     }
 
-    final hasSystems = systems.isNotEmpty;
+    final hasSystems =
+        systems.isNotEmpty;
 
     final items = hasSystems
-        ? systems.map((system) => system.name).toList()
-        : [
+        ? systems
+            .map((system) => system.name)
+            .toList()
+        : const [
             'NO ROMS FOUND',
             'BACK',
           ];
@@ -96,7 +131,8 @@ class _GamesScreenState extends State<GamesScreen> {
             top: 60,
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
             children: [
               const Text(
                 'GAMES',
@@ -105,6 +141,7 @@ class _GamesScreenState extends State<GamesScreen> {
                   fontSize: 24,
                 ),
               ),
+
               const SizedBox(height: 40),
 
               if (!hasSystems)
@@ -124,7 +161,6 @@ class _GamesScreenState extends State<GamesScreen> {
                 onBack: _goBack,
                 onSelected: (index) {
                   if (!hasSystems) {
-                    // "NO ROMS FOUND" does nothing.
                     if (index == 1) {
                       _goBack();
                     }

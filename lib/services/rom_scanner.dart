@@ -1,9 +1,22 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
+
+import 'package:saf/saf.dart';
+
+class RomFile {
+  final String name;
+  final String path;
+
+  const RomFile({
+    required this.name,
+    required this.path,
+  });
+}
 
 class RomSystem {
   final String name;
   final String folderName;
-  final List<File> roms;
+  final List<RomFile> roms;
 
   RomSystem({
     required this.name,
@@ -104,7 +117,34 @@ class RomScanner {
         .replaceAll('-', '');
   }
 
+  static bool _matchesExtension(
+    String fileName,
+    List<String> extensions,
+  ) {
+    final dot = fileName.lastIndexOf('.');
+
+    if (dot <= 0 || dot == fileName.length - 1) {
+      return false;
+    }
+
+    final extension = fileName
+        .substring(dot + 1)
+        .toLowerCase();
+
+    return extensions.contains(extension);
+  }
+
   static Future<List<RomSystem>> scan(String rootPath) async {
+    if (Platform.isAndroid) {
+      return _scanAndroid(rootPath);
+    }
+
+    return _scanDesktop(rootPath);
+  }
+
+  static Future<List<RomSystem>> _scanDesktop(
+    String rootPath,
+  ) async {
     final root = Directory(rootPath);
 
     if (!await root.exists()) {
@@ -114,12 +154,17 @@ class RomScanner {
     final results = <RomSystem>[];
 
     try {
-      await for (final entity in root.list(followLinks: false)) {
+      await for (final entity in root.list(
+        followLinks: false,
+      )) {
         if (entity is! Directory) {
           continue;
         }
 
-        final folderName = entity.path.split(Platform.pathSeparator).last;
+        final folderName = entity.path
+            .split(Platform.pathSeparator)
+            .last;
+
         final normalizedName = _normalize(folderName);
 
         final systemInfo = systems[normalizedName];
@@ -129,9 +174,10 @@ class RomScanner {
         }
 
         final extensions =
-            (systemInfo['extensions'] as List<dynamic>).cast<String>();
+            (systemInfo['extensions'] as List<dynamic>)
+                .cast<String>();
 
-        final roms = <File>[];
+        final roms = <RomFile>[];
 
         await for (final fileEntity in entity.list(
           recursive: true,
@@ -141,18 +187,23 @@ class RomScanner {
             continue;
           }
 
-          final fileName = fileEntity.path.split(Platform.pathSeparator).last;
+          final fileName = fileEntity.path
+              .split(Platform.pathSeparator)
+              .last;
 
-          if (!fileName.contains('.')) {
+          if (!_matchesExtension(
+            fileName,
+            extensions,
+          )) {
             continue;
           }
 
-          final extension =
-              fileName.split('.').last.toLowerCase();
-
-          if (extensions.contains(extension)) {
-            roms.add(fileEntity);
-          }
+          roms.add(
+            RomFile(
+              name: fileName,
+              path: fileEntity.path,
+            ),
+          );
         }
 
         roms.sort(
@@ -172,6 +223,7 @@ class RomScanner {
         }
       }
     } catch (e) {
+      debugPrint('Desktop ROM scan error: $e');
       return [];
     }
 
@@ -180,5 +232,118 @@ class RomScanner {
     );
 
     return results;
+  }
+
+  static Future<List<RomSystem>> _scanAndroid(
+    String rootUri,
+  ) async {
+    final saf = Saf();
+
+    final results = <RomSystem>[];
+
+    try {
+      debugPrint('ANDROID SAF ROOT: $rootUri');
+
+      await for (final entry in saf.walk(rootUri)) {
+        final file = entry.file;
+
+        if (file.isDir) {
+          continue;
+        }
+
+        final parts = entry.relativePath.split('/');
+
+        if (parts.isEmpty) {
+          continue;
+        }
+
+        final fileName = file.name;
+
+        if (parts.length < 2) {
+          continue;
+        }
+
+        // The first directory underneath the selected ROM folder
+        // determines the system.
+        final folderName = parts.first;
+        final normalizedName = _normalize(folderName);
+
+        final systemInfo = systems[normalizedName];
+
+        if (systemInfo == null) {
+          continue;
+        }
+
+        final extensions =
+            (systemInfo['extensions'] as List<dynamic>)
+                .cast<String>();
+
+        if (!_matchesExtension(
+          fileName,
+          extensions,
+        )) {
+          continue;
+        }
+
+        RomSystem? existingSystem;
+
+        for (final system in results) {
+          if (system.folderName == folderName) {
+            existingSystem = system;
+            break;
+          }
+        }
+
+        final rom = RomFile(
+          name: fileName,
+          path: file.uri,
+        );
+
+        if (existingSystem == null) {
+          results.add(
+            RomSystem(
+              name: systemInfo['name'] as String,
+              folderName: folderName,
+              roms: [rom],
+            ),
+          );
+        } else {
+          existingSystem.roms.add(rom);
+        }
+      }
+
+      for (final system in results) {
+        system.roms.sort(
+          (a, b) => a.name.toLowerCase().compareTo(
+                b.name.toLowerCase(),
+              ),
+        );
+      }
+
+      results.sort(
+        (a, b) => a.name.compareTo(b.name),
+      );
+
+      debugPrint(
+        'ANDROID SAF SYSTEMS FOUND: ${results.length}',
+      );
+
+      for (final system in results) {
+        debugPrint(
+          'SYSTEM: ${system.name} | ROMS: ${system.roms.length}',
+        );
+
+        for (final rom in system.roms) {
+          debugPrint(
+            '  ROM: ${rom.name} | ${rom.path}',
+          );
+        }
+      }
+
+      return results;
+    } catch (e) {
+      debugPrint('Android SAF scan error: $e');
+      return [];
+    }
   }
 }

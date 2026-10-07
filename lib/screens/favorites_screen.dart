@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 
 import '../services/library_service.dart';
@@ -10,11 +8,12 @@ class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
 
   @override
-  State<FavoritesScreen> createState() => _FavoritesScreenState();
+  State<FavoritesScreen> createState() =>
+      _FavoritesScreenState();
 }
 
 class _FavoriteRom {
-  final File file;
+  final RomFile file;
   final String systemName;
 
   const _FavoriteRom({
@@ -23,7 +22,8 @@ class _FavoriteRom {
   });
 }
 
-class _FavoritesScreenState extends State<FavoritesScreen> {
+class _FavoritesScreenState
+    extends State<FavoritesScreen> {
   List<_FavoriteRom> favorites = [];
   bool loading = true;
 
@@ -39,7 +39,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       loading = true;
     });
 
-    final folder = await LibraryService.getRomFolder();
+    final folder =
+        await LibraryService.getRomFolder();
 
     if (folder == null) {
       if (!mounted) return;
@@ -52,10 +53,14 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
       return;
     }
 
-    final systems = await RomScanner.scan(folder);
-    final favoritePaths = await LibraryService.getFavorites();
+    final systems =
+        await RomScanner.scan(folder);
 
-    final favoriteSet = favoritePaths.toSet();
+    final favoritePaths =
+        await LibraryService.getFavorites();
+
+    final favoriteSet =
+        favoritePaths.toSet();
 
     final result = <_FavoriteRom>[];
 
@@ -73,9 +78,11 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     }
 
     result.sort((a, b) {
-      return _displayName(a.file)
+      return a.file.name
           .toLowerCase()
-          .compareTo(_displayName(b.file).toLowerCase());
+          .compareTo(
+            b.file.name.toLowerCase(),
+          );
     });
 
     if (!mounted) return;
@@ -86,26 +93,18 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     });
   }
 
-  String _displayName(File rom) {
-    final name = rom.path.split(Platform.pathSeparator).last;
-
-    final dot = name.lastIndexOf('.');
-
-    if (dot > 0) {
-      return name.substring(0, dot);
-    }
-
-    return name;
-  }
-
   Future<void> _toggleFavorite(int index) async {
-    if (index < 0 || index >= favorites.length) {
+    if (index < 0 ||
+        index >= favorites.length) {
       return;
     }
 
-    final rom = favorites[index].file;
+    final rom =
+        favorites[index].file;
 
-    await LibraryService.removeFavorite(rom.path);
+    await LibraryService.removeFavorite(
+      rom.path,
+    );
 
     await _loadFavorites();
   }
@@ -138,9 +137,12 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
     }
 
     final items = favorites.isEmpty
-        ? ['NO FAVORITES', 'BACK']
+        ? const [
+            'NO FAVORITES',
+            'BACK',
+          ]
         : favorites.map((favorite) {
-            return '* ${_displayName(favorite.file)}';
+            return '* ${favorite.file.name}';
           }).toList();
 
     return Scaffold(
@@ -152,7 +154,8 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
             top: 60,
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
             children: [
               const Text(
                 'FAVORITES',
@@ -161,6 +164,7 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                   fontSize: 24,
                 ),
               ),
+
               const SizedBox(height: 40),
 
               MenuList(

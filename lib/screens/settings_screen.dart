@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:saf/saf.dart';
 
 import '../services/library_service.dart';
 import '../widgets/menu_list.dart';
@@ -17,6 +20,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+
     _loadSettings();
   }
 
@@ -31,20 +35,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _chooseRomFolder() async {
-    final selectedFolder = await FilePicker.getDirectoryPath(
-      dialogTitle: 'Select ROM Folder',
-    );
+    String? selectedFolder;
+    String? displayFolder;
 
-    if (selectedFolder == null) {
-      return;
+    if (Platform.isAndroid) {
+      final saf = Saf();
+
+      final selected = await saf.pickDirectory(
+        writePermission: false,
+        persistablePermission: true,
+      );
+
+      if (selected == null) {
+        return;
+      }
+
+      selectedFolder = selected.uri;
+      displayFolder = selected.name;
+    } else {
+      selectedFolder = await FilePicker.getDirectoryPath(
+        dialogTitle: 'Select ROM Folder',
+      );
+
+      if (selectedFolder == null) {
+        return;
+      }
+
+      displayFolder = selectedFolder;
     }
 
-    await LibraryService.setRomFolder(selectedFolder);
+    await LibraryService.setRomFolder(
+      selectedFolder,
+    );
 
     if (!mounted) return;
 
     setState(() {
-      romFolder = selectedFolder;
+      romFolder = displayFolder;
     });
   }
 
@@ -64,6 +91,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isAndroid =
+        Platform.isAndroid;
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
@@ -73,7 +103,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             top: 60,
           ),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
             children: [
               const Text(
                 'SETTINGS',
@@ -129,6 +160,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+
+              if (isAndroid) ...[
+                const SizedBox(height: 8),
+
+                const Text(
+                  'ANDROID STORAGE ACCESS',
+                  style: TextStyle(
+                    color: Colors.white38,
+                    fontSize: 11,
                   ),
                 ),
               ],
