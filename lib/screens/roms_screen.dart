@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../services/library_service.dart';
@@ -74,6 +76,41 @@ class _RomsScreenState extends State<RomsScreen> {
     );
 
     await _loadRoms();
+  }
+
+  Future<void> _launchRom(int index) async {
+    final rom = roms[index];
+    final executable = await LibraryService.getRetroArchPath();
+    if (!mounted) return;
+
+    String? message;
+    if (Platform.isAndroid) {
+      message = 'RetroArch launching is not available on Android yet.';
+    } else if (executable == null || executable.isEmpty) {
+      message = 'Set the RetroArch executable in Settings first.';
+    } else {
+      try {
+        final core = await LibraryService.getRetroArchCore(
+          widget.system.folderName,
+        );
+        final arguments = <String>[];
+        if (core != null && core.isNotEmpty) {
+          arguments.addAll(['-L', core]);
+        }
+        arguments.add(rom.path);
+        await Process.start(executable, arguments);
+      } on ProcessException catch (error) {
+        message = 'Could not start RetroArch: ${error.message}';
+      } catch (error) {
+        message = 'Could not start RetroArch: $error';
+      }
+    }
+
+    if (message != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(message)),
+      );
+    }
   }
 
   void _goBack() {
@@ -159,12 +196,7 @@ class _RomsScreenState extends State<RomsScreen> {
                 items: items,
                 onBack: _goBack,
                 onFavorite: _toggleFavorite,
-                onSelected: (index) {
-                  debugPrint(
-                    'Launching ROM: '
-                    '${roms[index].path}',
-                  );
-                },
+                onSelected: _launchRom,
               ),
             ],
           ),

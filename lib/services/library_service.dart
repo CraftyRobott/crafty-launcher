@@ -3,6 +3,35 @@ import 'package:shared_preferences/shared_preferences.dart';
 class LibraryService {
   static const String _romFolderKey = 'rom_folder';
   static const String _favoritesKey = 'favorite_roms';
+  static const String _retroArchPathKey = 'retroarch_path';
+
+  static Future<String?> getRetroArchCore(String systemId) async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('retroarch_core_$systemId');
+  }
+
+  static Future<void> setRetroArchCore(
+    String systemId,
+    String corePath,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('retroarch_core_$systemId', corePath);
+  }
+
+  static Future<String?> getRetroArchPath() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_retroArchPathKey);
+  }
+
+  static Future<void> setRetroArchPath(String path) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_retroArchPathKey, path);
+  }
+
+  static Future<void> clearRetroArchPath() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_retroArchPathKey);
+  }
 
   static Future<String?> getRomFolder() async {
     final prefs = await SharedPreferences.getInstance();

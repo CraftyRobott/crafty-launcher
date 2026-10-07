@@ -6,6 +6,7 @@ import 'package:saf/saf.dart';
 
 import '../services/library_service.dart';
 import '../widgets/menu_list.dart';
+import 'retroarch_cores_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -16,6 +17,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   String? romFolder;
+  String? retroArchPath;
 
   @override
   void initState() {
@@ -26,12 +28,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadSettings() async {
     final folder = await LibraryService.getRomFolder();
+    final retroArch = await LibraryService.getRetroArchPath();
 
     if (!mounted) return;
 
     setState(() {
       romFolder = folder;
+      retroArchPath = retroArch;
     });
+  }
+
+  Future<void> _chooseRetroArch() async {
+    final result = await FilePicker.pickFile(
+      dialogTitle: 'Select RetroArch executable',
+      type: FileType.any,
+    );
+    final selected = result?.path;
+    if (selected == null) return;
+
+    await LibraryService.setRetroArchPath(selected);
+    if (!mounted) return;
+    setState(() => retroArchPath = selected);
+  }
+
+  Future<void> _clearRetroArch() async {
+    await LibraryService.clearRetroArchPath();
+    if (!mounted) return;
+    setState(() => retroArchPath = null);
   }
 
   Future<void> _chooseRomFolder() async {
@@ -89,6 +112,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Navigator.of(context).pop();
   }
 
+  void _openRetroArchCores() {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => const RetroArchCoresScreen(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isAndroid =
@@ -119,8 +150,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               MenuList(
                 items: const [
                   'ROM FOLDER',
+                  'RETROARCH EXECUTABLE',
+                  'RETROARCH CORES',
                   'RESCAN LIBRARY',
                   'CLEAR ROM FOLDER',
+                  'CLEAR RETROARCH PATH',
                 ],
                 onBack: _goBack,
                 onSelected: (index) async {
@@ -130,11 +164,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       break;
 
                     case 1:
-                      await _loadSettings();
+                      await _chooseRetroArch();
                       break;
 
                     case 2:
+                      _openRetroArchCores();
+                      break;
+
+                    case 3:
+                      await _loadSettings();
+                      break;
+
+                    case 4:
                       await _clearRomFolder();
+                      break;
+
+                    case 5:
+                      await _clearRetroArch();
                       break;
                   }
                 },
@@ -157,6 +203,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                 Text(
                   romFolder!,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+
+              const SizedBox(height: 28),
+              Text(
+                retroArchPath == null
+                    ? 'RETROARCH: NOT SET'
+                    : 'RETROARCH EXECUTABLE:',
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                ),
+              ),
+              if (retroArchPath != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  retroArchPath!,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
